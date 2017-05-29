@@ -2,10 +2,12 @@
 
 Running
 
-    ./main.py -i <pdb-files> -o distances.txt
+    OMP_NUM_THREADS=4 ./main.py -i <pdb-files> -o distances.txt
 
 will read in a single pdb-trajectory or multiple single-model files and output the distances
-between each structure.
+between each structure, using 4 CPUs.
+
+For reference, 400 models of a 200 residue takes around 80 seconds on 8 CPUs
 
 A modified version of the FML package (github.com/andersx/FML/) is included and needs to be compiled prior to use (See below).
 
