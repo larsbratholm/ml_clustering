@@ -29,7 +29,6 @@ def cho_invert(A):
     fcho_invert(A)
     return A
 
-
 def cho_solve(A, y):
     """ Solves [A x = y] for x using a Cholesky decomposition
         via calls to LAPACK dpotrf and dpotrs in the F2PY module.

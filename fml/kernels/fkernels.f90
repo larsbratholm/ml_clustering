@@ -376,6 +376,40 @@ subroutine flaplacian_kernel(a, na, b, nb, k, sigma)
 
 end subroutine flaplacian_kernel
 
+subroutine fsargan_kernel(a, na, b, nb, k, sigma, gammas, ng)
+
+    implicit none
+
+    double precision, dimension(:,:), intent(in) :: a
+    double precision, dimension(:,:), intent(in) :: b
+    double precision, dimension(:), intent(in) :: gammas
+
+    integer, intent(in) :: na, nb, ng
+
+    double precision, dimension(:,:), intent(inout) :: k
+    double precision, intent(in) :: sigma
+
+    double precision, dimension(ng) :: prefactor
+    double precision :: inv_sigma
+    double precision :: l1
+
+    integer :: i, j, m, n
+
+    inv_sigma = -1.0d0 / sigma
+
+!$OMP PARALLEL DO PRIVATE(l1,prefactor)
+    do i = 1, nb
+        do j = 1, na
+            l1 = sum(abs(a(:,j) - b(:,i)))
+            do m = 1, ng
+                prefactor(m) = gammas(m) * (- inv_sigma * l1) ** m
+            enddo
+            k(j,i) = exp(inv_sigma * l1) * (1 + sum(prefactor(:)))
+        enddo
+    enddo
+!$OMP END PARALLEL DO
+
+end subroutine fsargan_kernel
 
 subroutine fget_alpha(q, n, y, sigma, lambda, alpha)
 
@@ -640,8 +674,6 @@ subroutine fget_alpha_from_distance(d, n, y, dgamma, lambda, alpha)
 
 end subroutine fget_alpha_from_distance
 
-
-
 subroutine fget_prediction_from_distance(D2, N2, alpha, dgamma, Y)
 
     implicit none
@@ -700,26 +732,3 @@ subroutine fget_prediction_from_distance(D2, N2, alpha, dgamma, Y)
 
 
 end subroutine fget_prediction_from_distance
-
-subroutine fmanhattan_distance(a, na, b, nb, k)
-
-    implicit none
-
-    double precision, dimension(:,:), intent(in) :: a
-    double precision, dimension(:,:), intent(in) :: b
-
-    integer, intent(in) :: na, nb
-
-    double precision, dimension(:,:), intent(inout) :: k
-
-    integer :: i, j
-
-!$OMP PARALLEL DO
-    do i = 1, nb
-        do j = 1, na
-            k(j,i) = sum(abs(a(:,j) - b(:,i)))
-        enddo
-    enddo
-!$OMP END PARALLEL DO
-
-end subroutine fmanhattan_distance

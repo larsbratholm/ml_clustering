@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2016 Anders Steen Christensen, Felix Faber
+# Copyright (c) 2016-2017 Anders Steen Christensen, Felix Faber, Lars Andersen Bratholm
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,20 +23,21 @@
 import numpy as np
 from numpy import empty, asfortranarray, ascontiguousarray, zeros
 
-from fkernels import fgaussian_kernel
-from fkernels import flaplacian_kernel
-from fkernels import fget_alpha
-from fkernels import fget_alpha_from_distance
-from fkernels import fget_prediction
-from fkernels import fget_prediction_from_distance
-from fkernels import fmanhattan_distance
-from fkernels import fget_vector_kernels_gaussian
-from fkernels import fget_vector_kernels_laplacian
-from fkernels import fget_vector_kernels_general_gaussian
-from farad_kernels import fget_kernels_arad
-from farad_kernels import fget_kernels_arad
-from faras_kernels import fget_kernels_aras
-from faras_kernels import fget_symmetric_kernels_aras
+from .fkernels import fgaussian_kernel
+from .fkernels import flaplacian_kernel
+from .fkernels import fsargan_kernel
+from .fkernels import fget_alpha
+from .fkernels import fget_alpha_from_distance
+from .fkernels import fget_prediction
+from .fkernels import fget_prediction_from_distance
+from .fkernels import fget_vector_kernels_gaussian
+from .fkernels import fget_vector_kernels_laplacian
+from .fkernels import fget_vector_kernels_general_gaussian
+from .farad_kernels import fget_kernels_arad
+from .farad_kernels import fget_kernels_arad
+from .faras_kernels import fget_kernels_aras
+from .faras_kernels import fget_symmetric_kernels_aras
+from ..math import l2_distance
 
 PTP = {\
          1  :[1,1] ,2:  [1,8]#Row1
@@ -124,6 +125,7 @@ def get_alpha(Q, N, Y, sigma, llambda):
     fget_alpha(Q, N, Y, sigma, llambda, alpha)
 
     return alpha
+
 def get_alpha_from_distance(D, N, Y, sigma, llambda):
 
     na = sum(N)
@@ -163,6 +165,82 @@ def laplacian_kernel(A, B, sigma):
 
     return K
 
+def sargan_kernel(A, B, sigma, gammas):
+    """ Calculates the Sargan kernel matrix K, where K_ij:
+
+            K_ij = exp(-1 * sigma**(-1) * || A_i - B_j ||_1) * (1 + sum_k( gamma[k] * sigma**(-k) * || A_i - B_j ||_1^k ) / (1 + sum_k( k! * gamma[k]))
+
+        Where A_i and B_j are descriptor vectors.
+
+        K is calculated using an OpenMP parallel Fortran routine.
+
+        NOTE: A and B need not be input as Fortran contiguous arrays.
+
+        Arguments:
+        ==============
+        A -- np.array of np.array of descriptors.
+        B -- np.array of np.array of descriptors.
+        sigma -- The value of sigma in the kernel matrix.
+        gammas -- The values of gammas in the kernel matrix.
+
+        Returns:
+        ==============
+        K -- The Sargan kernel matrix.
+    """
+
+    na = A.shape[1]
+    nb = B.shape[1]
+    ng = gammas.size
+
+    K = empty((na, nb), order='F')
+    fsargan_kernel(A, na, B, nb, K, sigma, gammas, ng)
+
+    return K
+
+def matern_kernel(A, B, sigma, order=1, metric="l1"):
+    """ Calculates the Matern kernel matrix K, where K_ij:
+            for order = 1:
+                K_ij = exp(-sigma**(-1) * d) * (1 + sigma**(-1) * d)
+            for order = 2:
+                K_ij = exp(-sigma**(-1) * d) * (1 + sigma**(-1) * d + sigma**(-2) * d**2 / 3)
+
+        Where A_i and B_j are descriptor vectors, and d is a distance measure.
+
+        K is calculated using an OpenMP parallel Fortran routine.
+
+        NOTE: A and B need not be input as Fortran contiguous arrays.
+
+        Arguments:
+        ==============
+        A -- np.array of np.array of descriptors.
+        B -- np.array of np.array of descriptors.
+        sigma -- The value of sigma in the kernel matrix.
+        order -- The order of the polynomial
+        metric -- The distance metric (l1, l2)
+
+        Returns:
+        ==============
+        K -- The Sargan kernel matrix.
+    """
+
+    if metric == "l1":
+        if order == 1:
+            gammas = np.asarray([1], dtype=float)
+        elif order == 2:
+            gammas = np.asarray([1,1/3.0], dtype=float)
+        else:
+            quit("Order:%d not implemented in Matern Kernel" % order)
+        return sargan_kernel(A, B, sigma, gammas)
+    elif metric == "l2":
+        K = l2_distance(A,B)
+        if order == 1:
+            return np.exp(-K/sigma) * (1 + K/sigma)
+        elif order == 2:
+            return np.exp(-K/sigma) * (1 + K/sigma + K**2 / sigma**2 / 3.0)
+        else:
+            quit("Order:%d not implemented in Matern Kernel" % order)
+    else:
+        quit("Metric: %s not supported in Matern Kernel" % metric)
 
 def gaussian_kernel(A, B, sigma):
     """ Calculates the Gaussian kernel matrix K, where K_ij:
@@ -192,37 +270,6 @@ def gaussian_kernel(A, B, sigma):
     K = empty((na, nb), order='F')
 
     fgaussian_kernel(A, na, B, nb, K, sigma)
-
-    return K
-
-
-def manhattan_distance(A, B,):
-    """ Calculates the Laplacian kernel matrix K, where K_ij:
-
-            K_ij = exp(-1 * sigma**(-1) * || A_i - B_j ||_1)
-
-        Where A_i and B_j are descriptor vectors.
-
-        K is calculated using an OpenMP parallel Fortran routine.
-
-        NOTE: A and B need not be input as Fortran contiguous arrays.
-
-        Arguments:
-        ==============
-        A -- np.array of np.array of descriptors.
-        B -- np.array of np.array of descriptors.
-        sigma -- The value of sigma in the kernel matrix.
-
-        Returns:
-        ==============
-        K -- The Laplacian kernel matrix.
-    """
-
-    na = A.shape[1]
-    nb = B.shape[1]
-
-    K = empty((na, nb), order='F')
-    fmanhattan_distance(A, na, B, nb, K)
 
     return K
 
@@ -296,7 +343,6 @@ def get_atomic_kernels_arad(X1, X2, Z1, Z2, sigmas, \
     return fget_kernels_arad(X1, X2, Z1_arad, Z2_arad, N1, N2, sigmas, \
                 nm1, nm2, nsigmas, width, cut_distance, r_width, c_width)
 
-
 def get_atomic_symmetric_kernels_arad(X1, Z1, sigmas, \
         width=0.2, cut_distance=6.0, r_width=1.0, c_width=0.5):
     """ Calculates the Gaussian kernel matrix K for atomic ARAD
@@ -361,21 +407,6 @@ def get_atomic_kernels_laplacian(x1, x2, N1, N2, sigmas):
  
      return fget_vector_kernels_laplacian(x1, x2, n1, n2, sigmas, \
          nm1, nm2, nsigmas)
-
-     
-# def get_atomic_kernels_gaussian(x1, x2, N1, N2, sigmas):
-#  
-#      nm1 = len(N1)
-#      nm2 = len(N2)
-#  
-#      N1 = np.array(N1,dtype=np.int32)
-#      N2 = np.array(N2,dtype=np.int32)
-#  
-#      nsigmas = len(sigmas)
-#      sigmas = np.array(sigmas)
-#  
-#      return fget_vector_kernels_gaussian(x1, x2, n1, n2, sigmas, \
-#          nm1, nm2, nsigmas)
 
 def get_atomic_kernels_gaussian(mols1, mols2, sigmas):
 
@@ -490,7 +521,6 @@ def get_atomic_kernels_aras(X1, X2, Z1, Z2, sigmas, \
                 nm1, nm2, nsigmas, t_width, r_width, \
                 c_width, d_width, cut_distance, order, pd, scale_angular)
 
-    
 def get_atomic_symmetric_kernels_aras(X1, Z1, sigmas, \
         t_width=np.pi/1.0, d_width=0.2, cut_distance=5.0, \
         r_width=1.0, order=1, c_width=0.5, scale_angular=0.1):
@@ -542,38 +572,3 @@ def get_atomic_symmetric_kernels_aras(X1, Z1, sigmas, \
     return fget_symmetric_kernels_aras(X1, N1, neighbors1, sigmas, \
                 nm1, nsigmas, t_width, r_width, \
                 c_width, d_width, cut_distance, order, pd, scale_angular)
-
-
-# def get_atomic_kernels_general_gaussian(mols1, mols2, sigmas):
-# 
-# 
-#     n1 = np.array([mol.natoms for mol in mols1], dtype=np.int32)
-#     n2 = np.array([mol.natoms for mol in mols2], dtype=np.int32)
-# 
-#     amax1 = np.amax(n1)
-#     amax2 = np.amax(n2)
-# 
-#     nm1 = len(mols1)
-#     nm2 = len(mols2)
-#     
-#     cmat_size = mols1[0].local_coulomb_matrix.shape[1]
-# 
-#     x1 = np.zeros((cmat_size,amax1,nm1), dtype=np.float64)
-#     x2 = np.zeros((cmat_size,amax2,nm2), dtype=np.float64)
-# 
-#     for imol in range(nm1):
-#         for iatom in range(n1[imol]):
-#             for j in range(cmat_size):
-#                 x1[j,iatom,imol] += mols1[imol].local_coulomb_matrix[iatom][j]
-# 
-#     for imol in range(nm2):
-#         for iatom in range(n2[imol]):
-#             for j in range(cmat_size):
-#                 x2[j,iatom,imol] += mols2[imol].local_coulomb_matrix[iatom][j]
-# 
-#     nsigmas = len(sigmas)
-# 
-#     sigmas = np.array(sigmas, dtype=np.float64)
-#     
-#     return fget_vector_kernels_general_gaussian(x1, x2, n1, n2, sigmas, \
-#         nm1, nm2, nsigmas)

@@ -21,7 +21,7 @@
 ! SOFTWARE.
 
 subroutine fmanhattan_distance(A, B, D)
-    
+
     implicit none
 
     double precision, dimension(:,:), intent(in) :: A
@@ -42,9 +42,7 @@ subroutine fmanhattan_distance(A, B, D)
     enddo
 !$OMP END PARALLEL DO
 
-
 end subroutine fmanhattan_distance
-
 
 subroutine fl2_distance(A, B, D)
 
@@ -79,7 +77,6 @@ subroutine fl2_distance(A, B, D)
 
 end subroutine fl2_distance
 
-
 subroutine fp_distance_double(A, B, D, p)
 
     implicit none
@@ -90,7 +87,7 @@ subroutine fp_distance_double(A, B, D, p)
     double precision, intent(in) :: p
 
     integer :: na, nb, nv
-    integer :: i, j
+    integer :: i, j, k
 
     double precision, allocatable, dimension(:) :: temp
     double precision :: inv_p
@@ -107,7 +104,7 @@ subroutine fp_distance_double(A, B, D, p)
 !$OMP PARALLEL DO PRIVATE(temp)
     do i = 1, nb
         do j = 1, na
-            temp(:) = A(:,j) - B(:,i)
+            temp(:) = abs(A(:,j) - B(:,i))
             D(j,i) = (sum(temp**p))**inv_p
         enddo
     enddo

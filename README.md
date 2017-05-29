@@ -1,3 +1,14 @@
+# Clustering with machine learning descriptors
+
+Running
+
+    ./main.py -i <pdb-files> -o distances.txt
+
+will read in a single pdb-trajectory or multiple single-model files and output the distances
+between each structure.
+
+A modified version of the FML package (github.com/andersx/FML/) is included and needs to be compiled prior to use (See below).
+
 # F2PY augmented Machine Learning (FML)
 
 FML is a Python library to efficiently carry out machine learning calculation. Everything is accessed via a simple Python interface, while efficient, parallel code (written in F90 with OpenMP) is executed behind the scenes.

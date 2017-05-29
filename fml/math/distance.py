@@ -116,7 +116,6 @@ def p_distance(A, B, p=2):
 
     return D
 
-
 def get_l2_distance_arad(X1, X2, Z1, Z2, \
         width=0.2, cut_distance=6.0, r_width=1.0, c_width=0.5):
     """ Calculates the Gaussian distance matrix D for atomic ARAD for two

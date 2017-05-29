@@ -33,8 +33,6 @@ NUCLEAR_CHARGE["P"] = 15.0
 NUCLEAR_CHARGE["S"] = 16.0
 NUCLEAR_CHARGE["Ge"] = 32.0
 
-# from frepresentations import fgenerate_coulomb_matrix
-# import frepresentations
 
 def triangular_to_vector(M, uplo="U"):
 
@@ -49,7 +47,6 @@ def triangular_to_vector(M, uplo="U"):
     index = 0
     for i in range(n):
         for j in range(n):
-            
             if j > i:
                 continue
 
@@ -58,7 +55,6 @@ def triangular_to_vector(M, uplo="U"):
             index += 1
 
     return v
-
 
 def generate_coulomb_matrix(atomtypes, coordinates, size=23):
 
@@ -111,8 +107,6 @@ def generate_coulomb_matrix(atomtypes, coordinates, size=23):
 
     # return Mij.flatten(size**2)
     return triangular_to_vector(Mij)
-
-
 
 def generate_local_coulomb_matrix(atomtypes, coordinates, size=23, calc="all"):
 
@@ -213,10 +207,7 @@ def generate_local_coulomb_matrix(atomtypes, coordinates, size=23, calc="all"):
         # return Mij.flatten(size**2)
         return triangular_to_vector[Mij]
 
-
-
-
-def generate_atomic_coulomb_matrix(atomtypes, coordinates, size=23, calc="all"):
+def generate_atomic_coulomb_matrix(atomtypes, coordinates, size=23, cutoff = 8):
 
     # Generate an local coloumb matrix sorted by distance to query atom
 
@@ -233,16 +224,22 @@ def generate_atomic_coulomb_matrix(atomtypes, coordinates, size=23, calc="all"):
             distances.append((distance, j))
 
         distances.sort()
-        print distances
 
         for m, (dist_j, l) in enumerate(distances):
+            if dist_j > cutoff:
+                continue
             for n, (dist_k, k) in enumerate(distances):
+                if dist_k > cutoff:
+                    continue
                 if m == n:
                     Mij[m, n] = 0.5 * NUCLEAR_CHARGE[atomtypes[l]] ** 2.4
                 else:
+                    d = np.linalg.norm(coordinates[k] - coordinates[l])
                     Mij[m, n] = NUCLEAR_CHARGE[atomtypes[k]] * NUCLEAR_CHARGE[atomtypes[l]] \
-                            / np.linalg.norm(coordinates[k] - coordinates[l])
+                            / d
 
         Mijs.append(triangular_to_vector(Mij))
 
-    return Mijs
+    return np.asarray(Mijs)
+
+

@@ -24,8 +24,10 @@
 FML representation
 =====
 Provides
-  1. coulomb_matrix
-  1. local_coulomb_matrix
+  1. sorted_coulomb_matrix
+  2. unsorted_coulomb_matrix
+  3. local_coulomb_matrix
+  4. atomic_coulomb_matrix
 """
 
 from frepresentations import fgenerate_coulomb_matrix
