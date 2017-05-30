@@ -9,7 +9,7 @@ between each structure, using 4 CPUs.
 The output format can be used directly as input to the fast_protein_cluster program (github.com/lhhunghimself/fast_protein_cluster), where hierarchical clustering or kmeans clustering respectively can be performed with the commands
 
     ./fast_protein_cluster --nclusters 20 --haverage --read_text_matrix distances.txt
-    ./fast_protein_cluster --nclusters 20 --converge_seeds 10000 --nthreads 8 --read_text_matrix distances.txt
+    ./fast_protein_cluster --nclusters 20 --converge_seeds 10000 --nthreads 4 --read_text_matrix distances.txt
 
 For reference, the distance matrix for 400 models of a 200 residue takes around 80 seconds on 8 CPUs to create.
 
