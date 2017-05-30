@@ -7,8 +7,11 @@ Running
 will read in a single pdb-trajectory or multiple single-model files and output the distances
 between each structure, using 4 CPUs.
 The output format can be used directly as input to the fast_protein_cluster program (github.com/lhhunghimself/fast_protein_cluster), where a hierarchical clustering can be performed with the command
+
    ./fast_protein_cluster --nclusters 20 --haverage --read_text_matrix distances.txt
+
 and kmeans clustering with
+
     ./fast_protein_cluster --nclusters 20 --converge_seeds 10000 --nthreads 8 --read_text_matrix distances.txt
 
 For reference, the distance matrix for 400 models of a 200 residue takes around 80 seconds on 8 CPUs to create.
